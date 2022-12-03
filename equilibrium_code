@@ -1,0 +1,109 @@
+gas = Solution('gri30.yaml'); % set gas using GRI3.0 Mechanism
+nsp = nSpecies(gas); % number of species in GRI3.0 Mechanism
+
+% find methane and CO2 indices
+ich4 = speciesIndex(gas,'CH4');
+ico2 = speciesIndex(gas,'CO2');
+ic2h6 = speciesIndex(gas,'C2H6');
+ih2o = speciesIndex(gas,'H2O');
+ico = speciesIndex(gas,'CO');
+ih2 = speciesIndex(gas,'H2');
+ic3h8 = speciesIndex(gas,'C3H8');
+
+nPhis = 50; % number of equivalence ratio points
+phi = linspace(0.1, 3.0, nPhis); % equivalence ratio range
+tad(nPhis) = 0; % initialize array to store adiabatic temperature
+xeq(nsp,nPhis) = 0; % intialize array to store mole fractions at equilibrium
+
+for i = 1:nPhis
+   x = zeros(nsp,1); % intialize matrix to store data
+   x(ich4,1) = phi(i); % set ch4 mole fractions as specified
+   x(ico2,1) = 1.0; % set initial mole fraction of CO2
+   set(gas,'Temperature',300.0,'Pressure',101325.0,'MoleFractions',x); % define parameters
+   equilibrate(gas,'TP'); % equilibrium calculation at constant T,P
+   tad(i) = temperature(gas); % temperature at equilibrium
+   xeq(:,i) = moleFractions(gas); % mole fractions at equilibrium
+end
+
+% plot adiabatic flame temperature vs. equivalence ratio at STD
+clf;
+subplot(2,2,1);
+plot(phi,tad);
+xlabel('Equivalence Ratio');
+ylabel('Temperature (K)');
+title('Adiabatic Flame Temperature');
+
+% plot equilibrium composition vs. intial mole fractions
+subplot(2,2,2);
+semilogy(phi,xeq([ico2,ich4,ic2h6,ih2o,ico,ih2,ic3h8],:));
+axis([phi(1) phi(50) 1.0e-10 1]);
+%legend(speciesName(gas,1:nsp),1);
+j = 10;
+for k = [ico2,ich4,ic2h6,ih2o,ico,ih2,ic3h8]
+    text(phi(j),1.5*xeq(k,j),speciesName(gas,k))
+    j = j + 5;
+    if j > 46
+        j = 10;
+    end
+end
+xlabel('Equivalence Ratio');
+ylabel('Mole Fraction');
+title('Equilibrium Composition at 300K, 1atm');
+
+
+% now, find equilibrium mole fractions vs. temperature at constant P, stoich 
+T = linspace(200, 2000, 100); % set temperature range
+xeq_T(nsp,size(T)) = 0; % intialize array to store mole fractions
+
+for i = 1:size(T,2)
+    x = zeros(nsp,1);
+    x(ich4,1) = 1.0;
+    x(ico2,1) = 1.0;
+    set(gas,'Temperature',T(i),'Pressure',101325.0,'MoleFractions',x);
+    equilibrate(gas,'TP');
+    xeq_T(:,i) = moleFractions(gas);
+end
+
+% plot mole fraction vs. temperature
+subplot(2,2,3)
+semilogy(T,xeq_T([ico2,ich4,ic2h6,ih2o,ico,ih2,ic3h8],:));
+j = 10;
+for k = [ico2,ich4,ic2h6,ih2o,ico,ih2,ic3h8]
+    text(T(j),1.5*xeq_T(k,j),speciesName(gas,k))
+    j = j + 10;
+    if j > 46
+        j = 10;
+    end
+end
+xlabel('Temperature (K)');
+ylabel('Mole Fraction');
+title('Equilibrium Composition at 1atm, Φ=1');
+
+
+% then, find equilibrium mole fracitons vs. pressure at constant T, stoich
+P = 0.1:0.1:10; % set pressure range
+xeq_P(nsp,size(P)) = 0; % intialize array to store mole fractions
+
+for i = 1:size(P,2)
+    x = zeros(nsp,1);
+    x(ich4,1) = 1.0;
+    x(ico2,1) = 1.0;
+    set(gas,'Temperature',1000,'Pressure',P(i)*101325,'MoleFractions',x);
+    equilibrate(gas,'TP');
+    xeq_P(:,i) = moleFractions(gas);
+end
+
+% plot mole fraction vs. pressure
+subplot(2,2,4)
+semilogy(P,xeq_P([ico2,ich4,ic2h6,ih2o,ico,ih2,ic3h8],:));
+j = 10;
+for k = [ico2,ich4,ic2h6,ih2o,ico,ih2,ic3h8]
+    text(P(j),1.5*xeq_P(k,j),speciesName(gas,k))
+    j = j + 10;
+    if j > 46
+        j = 10;
+    end
+end
+xlabel('Pressure (atm)');
+ylabel('Mole Fraction');
+title('Equilibrium Composition at T=1000K, Φ=1');
